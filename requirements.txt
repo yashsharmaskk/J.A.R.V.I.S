@@ -1,0 +1,23 @@
+# LangChain-based dependencies
+langchain>=0.1.0
+langchain-community>=0.0.10
+langchain-ollama>=0.1.0
+
+# Core AI and speech
+openai-whisper==20231117
+pyttsx3==2.90
+sounddevice==0.4.6
+numpy>=1.24.0
+
+# Web server for frontend
+flask>=2.3.0
+flask-cors>=4.0.0
+
+# Utilities
+python-dotenv==1.0.0
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+rich>=13.0.0
+
+# Optional GUI
+customtkinter>=5.2.0

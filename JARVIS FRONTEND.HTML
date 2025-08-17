@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cosmic Voice A.I.</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto:wght@300;400&display=swap" rel="stylesheet">
+    <!-- Import Tone.js for sound effects -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #000005; /* Near black */
+            color: #e2e8f0;
+            overflow: hidden;
+            margin: 0;
+        }
+        #ai-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            cursor: none; /* Hide cursor for a cleaner look */
+        }
+        #title-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 2rem 1rem;
+            z-index: 10;
+            text-align: center;
+            pointer-events: none;
+        }
+        #title-text {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            font-weight: 700;
+            color: #a5b4fc;
+            text-shadow: 0 0 15px #38bdf8, 0 0 25px #38bdf8;
+            letter-spacing: 0.2em;
+            /* Shimmer effect styles */
+            background: linear-gradient(90deg, #a5b4fc, #fff, #a5b4fc);
+            background-size: 200% 100%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shimmer 5s infinite linear;
+        }
+        @keyframes shimmer {
+            0% {
+                background-position: 200% 0;
+            }
+            100% {
+                background-position: -200% 0;
+            }
+        }
+        #caption-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 2rem 1rem;
+            z-index: 10;
+            text-align: center;
+            background: linear-gradient(to top, rgba(0, 0, 5, 0.9), transparent);
+            pointer-events: none;
+        }
+        #caption-text {
+            font-size: 1.5rem;
+            font-weight: 300;
+            text-shadow: 0 0 10px rgba(129, 140, 248, 0.7);
+            transition: color 0.3s ease, opacity 0.5s ease;
+            opacity: 1;
+        }
+        .listening {
+            color: #a5b4fc;
+        }
+        .speaking {
+            color: #fff;
+        }
+        .thinking {
+            color: #f59e0b; /* Amber color */
+            text-shadow: 0 0 8px #f59e0b;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div id="title-container">
+        <h1 id="title-text">J.A.R.V.I.S.</h1>
+    </div>
+
+    <canvas id="ai-canvas"></canvas>
+
+    <div id="caption-container">
+        <p id="caption-text">Click anywhere to begin</p>
+    </div>
+
+    <!-- Three.js and addons -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.161.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        // --- UI & AUDIO ELEMENTS ---
+        const captionText = document.getElementById('caption-text');
+        let activationSynth, deactivationSynth;
+        let audioInitialized = false;
+
+        // --- 3D SCENE SETUP ---
+        let scene, camera, renderer, particleSystem, glowCore, pointLight, entityGroup, starField;
+        let isAISpeaking = false;
+        const clock = new THREE.Clock();
+        const mouse = new THREE.Vector2(-100, -100);
+
+        function init3D() {
+            const canvas = document.getElementById('ai-canvas');
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 5;
+
+            renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            
+            // Starfield Background
+            const starCount = 5000;
+            const starPositions = new Float32Array(starCount * 3);
+            for (let i = 0; i < starCount; i++) {
+                const i3 = i * 3;
+                starPositions[i3] = (Math.random() - 0.5) * 100;
+                starPositions[i3 + 1] = (Math.random() - 0.5) * 100;
+                starPositions[i3 + 2] = (Math.random() - 0.5) * 100;
+            }
+            const starGeometry = new THREE.BufferGeometry();
+            starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+            const starMaterial = new THREE.PointsMaterial({
+                size: 0.05,
+                color: 0xaaaaaa,
+                transparent: true,
+                opacity: 0.5
+            });
+            starField = new THREE.Points(starGeometry, starMaterial);
+            scene.add(starField);
+
+            entityGroup = new THREE.Group();
+            scene.add(entityGroup);
+
+            pointLight = new THREE.PointLight(0x00aaff, 1.0, 100);
+            entityGroup.add(pointLight);
+
+            const coreGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+            const coreMaterial = new THREE.MeshBasicMaterial({ color: 0x818cf8, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending });
+            glowCore = new THREE.Mesh(coreGeometry, coreMaterial);
+            entityGroup.add(glowCore);
+
+            const particleCount = 10000;
+            const positions = new Float32Array(particleCount * 3);
+            const originalPositions = new Float32Array(particleCount * 3);
+            const colors = new Float32Array(particleCount * 3);
+            const colorInside = new THREE.Color("#818cf8");
+            const colorOutside = new THREE.Color("#38bdf8");
+
+            for (let i = 0; i < particleCount; i++) {
+                const i3 = i * 3;
+                const radius = (Math.random() * 2.0) + 0.5;
+                const phi = Math.acos(2 * Math.random() - 1);
+                const theta = THREE.MathUtils.randFloatSpread(2 * Math.PI);
+                const x = radius * Math.cos(theta) * Math.sin(phi);
+                const y = radius * Math.sin(theta) * Math.sin(phi);
+                const z = radius * Math.cos(phi);
+                positions[i3] = x; originalPositions[i3] = x;
+                positions[i3 + 1] = y; originalPositions[i3 + 1] = y;
+                positions[i3 + 2] = z; originalPositions[i3 + 2] = z;
+                const mixedColor = colorInside.clone().lerp(colorOutside, (radius - 0.5) / 2.0);
+                colors.set([mixedColor.r, mixedColor.g, mixedColor.b], i3);
+            }
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('originalPosition', new THREE.BufferAttribute(originalPositions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            const material = new THREE.PointsMaterial({ size: 0.05, vertexColors: true, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, sizeAttenuation: true });
+            particleSystem = new THREE.Points(geometry, material);
+            entityGroup.add(particleSystem);
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }, false);
+            
+            window.addEventListener('mousemove', (event) => {
+                mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            });
+
+            animate();
+        }
+
+        function animate() {
+            const elapsedTime = clock.getElapsedTime();
+            
+            // Animate starfield
+            starField.rotation.y = elapsedTime * 0.01;
+            starField.rotation.x = elapsedTime * 0.005;
+
+            entityGroup.position.x = Math.sin(elapsedTime * 0.2) * 0.2;
+            entityGroup.position.y = Math.cos(elapsedTime * 0.3) * 0.15;
+
+            const beatSpeed = isAISpeaking ? 10 : 2;
+            const beatIntensity = isAISpeaking ? 0.15 : 0.05;
+            const time = elapsedTime * beatSpeed;
+            const beat = (Math.sin(time) * 0.5 + 0.5) * (Math.sin(time * 0.5) * 0.5 + 0.5);
+            const scaleTarget = 1 + beat * beatIntensity;
+            entityGroup.scale.lerp(new THREE.Vector3(scaleTarget, scaleTarget, scaleTarget), 0.1);
+            
+            const lightIntensityTarget = isAISpeaking ? 7.0 : 2.0;
+            pointLight.intensity = THREE.MathUtils.lerp(pointLight.intensity, lightIntensityTarget, 0.1);
+
+            const positions = particleSystem.geometry.attributes.position.array;
+            const originalPositions = particleSystem.geometry.attributes.originalPosition.array;
+            const worldMouse = new THREE.Vector3(mouse.x * (window.innerWidth / 250), mouse.y * (window.innerHeight / 250), 0);
+            
+            for (let i = 0; i < positions.length; i += 3) {
+                const vertex = new THREE.Vector3(originalPositions[i], originalPositions[i+1], originalPositions[i+2]);
+                const dist = vertex.distanceTo(worldMouse);
+                
+                if (dist < 1.5) {
+                    const force = 1.5 - dist;
+                    const pushVector = vertex.clone().sub(worldMouse).normalize().multiplyScalar(force * 0.2);
+                    vertex.add(pushVector);
+                }
+                
+                const currentVertex = new THREE.Vector3(positions[i], positions[i+1], positions[i+2]);
+                currentVertex.lerp(vertex, 0.1);
+                
+                positions[i] = currentVertex.x;
+                positions[i+1] = currentVertex.y;
+                positions[i+2] = currentVertex.z;
+            }
+            particleSystem.geometry.attributes.position.needsUpdate = true;
+
+            particleSystem.rotation.y = elapsedTime * 0.1;
+            particleSystem.rotation.x = elapsedTime * 0.05;
+
+            renderer.render(scene, camera);
+            requestAnimationFrame(animate);
+        }
+
+        // --- AUDIO SETUP ---
+        function initAudio() {
+            if (audioInitialized) return;
+            Tone.start();
+            activationSynth = new Tone.Synth({
+                oscillator: { type: 'sine' },
+                envelope: { attack: 0.01, decay: 0.2, sustain: 0.2, release: 0.5 }
+            }).toDestination();
+            deactivationSynth = new Tone.NoiseSynth({
+                noise: { type: 'white' },
+                envelope: { attack: 0.005, decay: 0.1, sustain: 0 }
+            }).toDestination();
+            audioInitialized = true;
+        }
+
+        // --- SPEECH SYNTHESIS & RECOGNITION ---
+        console.log('🎤 Checking speech recognition support...');
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition;
+        let isRecognitionActive = false;
+
+        if (SpeechRecognition) {
+            console.log('✅ Speech recognition is supported');
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.lang = 'en-US';
+            recognition.interimResults = false;
+
+            recognition.onstart = () => {
+                console.log('🎤 Speech recognition started');
+                isRecognitionActive = true;
+                captionText.textContent = 'Listening...';
+                captionText.classList.add('listening');
+                captionText.classList.remove('speaking');
+                if (activationSynth) activationSynth.triggerAttackRelease('C5', '8n');
+            };
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                console.log('🗣️ Speech recognized:', transcript);
+                captionText.textContent = `You: "${transcript}"`;
+                captionText.classList.remove('listening');
+                captionText.classList.add('speaking');
+                handleQuery(transcript.toLowerCase());
+            };
+
+            recognition.onerror = (event) => {
+                console.error('❌ Speech recognition error:', event.error);
+                isRecognitionActive = false;
+                
+                if (event.error === 'network') {
+                    captionText.textContent = 'Speech recognition unavailable. Try typing or use HTTPS.';
+                    console.log('💡 Try accessing via HTTPS or check microphone permissions');
+                } else if (event.error === 'not-allowed') {
+                    captionText.textContent = 'Microphone access denied. Please allow microphone access.';
+                } else if (event.error === 'no-speech') {
+                    captionText.textContent = 'No speech detected. Click to try again.';
+                } else {
+                    captionText.textContent = `Speech error: ${event.error}. Click to try again.`;
+                }
+                
+                // Show a text input as fallback
+                setTimeout(() => {
+                    showTextInputFallback();
+                }, 2000);
+            };
+            
+            recognition.onend = () => {
+                isRecognitionActive = false;
+                if (!isAISpeaking) {
+                    captionText.textContent = 'Click to speak to Jarvis';
+                    captionText.classList.remove('listening', 'speaking', 'thinking');
+                }
+            };
+        } else {
+            console.log('❌ Speech recognition not supported');
+            captionText.textContent = "Voice not supported. Click to type instead.";
+        }
+        
+        // Fallback text input function
+        function showTextInputFallback() {
+            const userInput = prompt("Speech recognition failed. Please type your message to Jarvis:");
+            if (userInput && userInput.trim()) {
+                captionText.textContent = `You: "${userInput}"`;
+                captionText.classList.remove('listening');
+                captionText.classList.add('speaking');
+                handleQuery(userInput.toLowerCase());
+            } else {
+                captionText.textContent = 'Click to speak to Jarvis';
+                captionText.classList.remove('listening', 'speaking', 'thinking');
+            }
+        }
+        
+        function speak(text) {
+            const lines = text.split(/[.!?]+/).filter(line => line.trim().length > 0);
+            let currentLineIndex = 0;
+            let currentUtterance = null;
+            
+            function speakNextLine() {
+                if (currentLineIndex >= lines.length || !isAISpeaking) {
+                    // Finished speaking or interrupted
+                    isAISpeaking = false;
+                    if (deactivationSynth) deactivationSynth.triggerAttackRelease('0.2');
+                    captionText.textContent = 'Click to speak to Jarvis';
+                    captionText.classList.remove('speaking');
+                    return;
+                }
+                
+                const currentLine = lines[currentLineIndex].trim();
+                if (currentLine.length === 0) {
+                    currentLineIndex++;
+                    speakNextLine();
+                    return;
+                }
+                
+                // Display current line in caption
+                captionText.textContent = `Jarvis: ${currentLine}`;
+                
+                if ('speechSynthesis' in window) {
+                    currentUtterance = new SpeechSynthesisUtterance(currentLine);
+                    
+                    currentUtterance.onend = () => {
+                        currentLineIndex++;
+                        setTimeout(() => speakNextLine(), 300); // Brief pause between lines
+                    };
+                    
+                    currentUtterance.onerror = () => {
+                        currentLineIndex++;
+                        speakNextLine();
+                    };
+                    
+                    window.speechSynthesis.speak(currentUtterance);
+                } else {
+                    // If no speech synthesis, just display text line by line
+                    setTimeout(() => {
+                        currentLineIndex++;
+                        speakNextLine();
+                    }, 1500); // Display each line for 1.5 seconds
+                }
+            }
+            
+            // Stop any current speech
+            if (window.speechSynthesis && window.speechSynthesis.speaking) {
+                window.speechSynthesis.cancel();
+            }
+            
+            captionText.classList.remove('listening', 'thinking');
+            captionText.classList.add('speaking');
+            isAISpeaking = true;
+            
+            // Start speaking line by line
+            speakNextLine();
+            
+            // Store the interrupt function globally so click handler can use it
+            window.interruptSpeech = () => {
+                isAISpeaking = false;
+                if (window.speechSynthesis && window.speechSynthesis.speaking) {
+                    window.speechSynthesis.cancel();
+                }
+                captionText.textContent = 'Click to speak to Jarvis';
+                captionText.classList.remove('speaking');
+            };
+        }
+
+        // --- MAIN LOGIC ---
+        async function initializeJarvis() {
+            console.log('🚀 Initializing Jarvis...');
+            try {
+                const response = await fetch('/api/initialize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+                console.log('📡 Initialize response:', data);
+                return data.success;
+            } catch (error) {
+                console.error('❌ Failed to initialize Jarvis:', error);
+                return false;
+            }
+        }
+
+        async function sendToJarvis(message) {
+            console.log('📤 Sending to Jarvis:', message);
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: message })
+                });
+                const result = await response.json();
+                console.log('📥 Jarvis response:', result);
+                return result;
+            } catch (error) {
+                console.error('❌ Error communicating with Jarvis:', error);
+                return { success: false, response: 'Connection to my AI systems has been interrupted, sir.' };
+            }
+        }
+
+        async function handleQuery(query) {
+            console.log('🤔 Handling query:', query);
+            captionText.textContent = 'Jarvis: Thinking...';
+            captionText.classList.add('thinking');
+            captionText.classList.remove('listening', 'speaking');
+
+            const result = await sendToJarvis(query);
+            
+            captionText.classList.remove('thinking');
+            
+            if (result.success) {
+                speak(result.response);
+            } else {
+                speak(result.response || 'I am having trouble connecting to my AI brain.');
+            }
+        }
+
+        // --- INITIALIZATION ---
+        init3D();
+        
+        // Add click listener to canvas for voice activation
+        document.getElementById('ai-canvas').addEventListener('click', () => {
+            console.log('🖱️ Canvas clicked');
+            console.log('Audio initialized:', audioInitialized);
+            console.log('Recognition active:', isRecognitionActive);
+            console.log('AI speaking:', isAISpeaking);
+            
+            // If AI is speaking, interrupt it
+            if (isAISpeaking) {
+                console.log('🛑 Interrupting speech...');
+                if (window.interruptSpeech) {
+                    window.interruptSpeech();
+                }
+                return;
+            }
+            
+            if (!audioInitialized) {
+                console.log('🎵 Initializing audio...');
+                initAudio();
+                // First time setup
+                initializeJarvis().then(initialized => {
+                    if (initialized) {
+                        console.log('✅ Jarvis initialized successfully');
+                        speak("Systems online. Click anywhere to speak with me.");
+                    } else {
+                        console.log('❌ Failed to initialize Jarvis');
+                        speak("I am having trouble connecting to my core systems. Please check the server.");
+                    }
+                });
+            } else if (!isRecognitionActive && !isAISpeaking && recognition) {
+                console.log('🎤 Starting speech recognition...');
+                try {
+                    // Start listening
+                    recognition.start();
+                } catch (error) {
+                    console.error('❌ Failed to start speech recognition:', error);
+                    showTextInputFallback();
+                }
+            } else if (!isRecognitionActive && !isAISpeaking && !recognition) {
+                console.log('💬 No speech recognition available, using text input');
+                showTextInputFallback();
+            } else {
+                console.log('⚠️ Cannot start recognition:', {
+                    recognitionActive: isRecognitionActive,
+                    aiSpeaking: isAISpeaking,
+                    recognitionExists: !!recognition
+                });
+            }
+        });
+        
+        window.addEventListener('click', async () => {
+            // This handles the initial setup only
+            if (!audioInitialized) {
+                initAudio();
+                const initialized = await initializeJarvis();
+                if (initialized) {
+                    speak("Systems online. Click anywhere to speak with me.");
+                } else {
+                    speak("I am having trouble connecting to my core systems. Please check the server.");
+                }
+            }
+        }, { once: true });
+
+    </script>
+</body>
+</html>
