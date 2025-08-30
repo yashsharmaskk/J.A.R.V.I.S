@@ -1,23 +1,29 @@
-# LangChain-based dependencies
+# Core web dependencies
+flask>=2.3.0
+flask-cors>=4.0.0
+starlette>=0.27.0
+uvicorn[standard]>=0.22.0
+
+# AI & model dependencies
+llama-cpp-python>=0.1.50
+# Use exact local version labels for CUDA builds
+torch>=2.0.0; platform_system == "Windows"
+torchvision>=0.15.0; platform_system == "Windows"
+openai-whisper>=20231117
+pyaudio>=0.2.13
+
+# Audio processing
+sounddevice>=0.4.6
+numpy>=1.24.0
+
+# Text-to-Speech
+pyttsx3>=2.90
+
+# LangChain integrations (optional)
 langchain>=0.1.0
 langchain-community>=0.0.10
 langchain-ollama>=0.1.0
 
-# Core AI and speech
-openai-whisper==20231117
-pyttsx3==2.90
-sounddevice==0.4.6
-numpy>=1.24.0
-
-# Web server for frontend
-flask>=2.3.0
-flask-cors>=4.0.0
-
 # Utilities
-python-dotenv==1.0.0
-pydantic>=2.0.0
-pydantic-settings>=2.0.0
+requests>=2.31.0
 rich>=13.0.0
-
-# Optional GUI
-customtkinter>=5.2.0

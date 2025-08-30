@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cosmic Voice A.I.</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto:wght@300;400&display=swap" rel="stylesheet">
+    <!-- Import Tone.js for sound effects -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #000005; /* Near black */
+            color: #e2e8f0;
+            overflow: hidden;
+            margin: 0;
+        }
+        #ai-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            cursor: none; /* Hide cursor for a cleaner look */
+        }
+        #title-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 2rem 1rem;
+            z-index: 10;
+            text-align: center;
+            pointer-events: none;
+        }
+        #title-text {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            font-weight: 700;
+            color: #a5b4fc;
+            text-shadow: 0 0 15px #38bdf8, 0 0 25px #38bdf8;
+            letter-spacing: 0.2em;
+            /* Shimmer effect styles */
+            background: linear-gradient(90deg, #a5b4fc, #fff, #a5b4fc);
+            background-size: 200% 100%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shimmer 5s infinite linear;
+        }
+        @keyframes shimmer {
+            0% {
+                background-position: 200% 0;
+            }
+            100% {
+                background-position: -200% 0;
+            }
+        }
+        #caption-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 2rem 1rem;
+            z-index: 10;
+            text-align: center;
+            background: linear-gradient(to top, rgba(0, 0, 5, 0.9), transparent);
+            pointer-events: none;
+        }
+        #caption-text {
+            font-size: 1.5rem;
+            font-weight: 300;
+            text-shadow: 0 0 10px rgba(129, 140, 248, 0.7);
+            transition: color 0.3s ease, opacity 0.5s ease;
+            opacity: 1;
+        }
+        
+        /* Debug button */
+        #debug-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+            background: rgba(59, 130, 246, 0.8);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        #debug-button:hover {
+            background: rgba(59, 130, 246, 1);
+        }
+        
+        .listening {
+            color: #a5b4fc;
+        }
+        .speaking {
+            color: #fff;
+        }
+        .thinking {
+            color: #f59e0b; /* Amber color */
+            text-shadow: 0 0 8px #f59e0b;
+        }
+
+        /* Responsive adjustments for tablets and mobile */
+        @media (max-width: 1024px) {
+            #title-text {
+                font-size: 1.8rem;
+            }
+            #caption-text {
+                font-size: 1.3rem;
+            }
+            #title-container, #caption-container {
+                padding: 1.5rem;
+            }
+            /* Reduce canvas visual complexity for tablets */
+            #ai-canvas {
+                opacity: 0.7;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            #title-text {
+                font-size: 1.5rem;
+            }
+            #caption-text {
+                font-size: 1.2rem;
+            }
+            #title-container, #caption-container {
+                padding: 1rem;
+            }
+            /* Further reduce for mobile */
+            #ai-canvas {
+                opacity: 0.5;
+            }
+        }
+        
+        /* Touch-friendly press-to-talk button */
+        #ptt-button {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #3b82f6, #1e40af);
+            border: 3px solid #60a5fa;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            display: none;
+            cursor: pointer;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+            transition: all 0.3s ease;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+        
+        #ptt-button:active {
+            transform: translateX(-50%) scale(0.95);
+            box-shadow: 0 0 30px rgba(59, 130, 246, 0.8);
+        }
+        
+        #ptt-button.listening {
+            background: linear-gradient(45deg, #10b981, #059669);
+            border-color: #34d399;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.5); }
+            50% { box-shadow: 0 0 40px rgba(16, 185, 129, 0.8); }
+            100% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.5); }
+        }
+        
+        /* Hide debug button on mobile */
+        @media (max-width: 768px) {
+            #debug-button {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="title-container">
+        <h1 id="title-text">J.A.R.V.I.S.</h1>
+    </div>
+
+    <canvas id="ai-canvas"></canvas>
+    
+    <!-- Touch-friendly Press-to-Talk button for mobile/tablet -->
+    <button id="ptt-button">
+        <div>HOLD</div>
+        <div>TO TALK</div>
+    </button>
+    
+    <!-- Debug test button -->
+    <button id="debug-button" onclick="testSystem()">Test "Hello"</button>
+    
+    <!-- Jarvis startup audio -->
+    <audio id="jarvis-startup-audio" preload="auto">
+        <source src="/audio/jarvis.mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+
+    <div id="caption-container">
+        <p id="caption-text">Click to Initiate Boot Sequence</p>
+    </div>
+
+    <!-- Three.js and addons -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.161.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        // --- UI & AUDIO ELEMENTS ---
+        const captionText = document.getElementById('caption-text');
+        const startupAudio = document.getElementById('jarvis-startup-audio');
+        let activationSynth, deactivationSynth;
+        let audioInitialized = false;
+
+        // --- STATE MANAGEMENT ---
+        let systemState = 'pending'; // pending, booting, active
+        let isAISpeaking = false;
+        let isAIThinking = false;
+        let bootStartTime = 0;
+        let currentUtterance = null;
+        let currentSpeechLines = [];
+        let currentLineIndex = 0;
+        let speechInterrupted = false;
+        const clock = new THREE.Clock();
+        const mouse = new THREE.Vector2(-100, -100);
+        
+        // --- 3D SCENE SETUP ---
+        let scene, camera, renderer, particleSystem, glowCore, pointLight, entityGroup, starField;
+
+        function init3D() {
+            const canvas = document.getElementById('ai-canvas');
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 5;
+
+            renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            
+            const isMobile = window.innerWidth < 768;
+            const starCount = isMobile ? 2000 : 5000;
+            const particleCount = isMobile ? 5000 : 10000;
+
+            const starPositions = new Float32Array(starCount * 3);
+            for (let i = 0; i < starCount; i++) {
+                starPositions.set([(Math.random() - 0.5) * 100, (Math.random() - 0.5) * 100, (Math.random() - 0.5) * 100], i * 3);
+            }
+            const starGeometry = new THREE.BufferGeometry();
+            starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+            const starMaterial = new THREE.PointsMaterial({ size: 0.05, color: 0xaaaaaa, transparent: true, opacity: 1.0 });
+            starField = new THREE.Points(starGeometry, starMaterial);
+            scene.add(starField);
+
+            entityGroup = new THREE.Group();
+            entityGroup.scale.set(0.01, 0.01, 0.01);
+            scene.add(entityGroup);
+
+            pointLight = new THREE.PointLight(0x00aaff, 1.0, 100);
+            entityGroup.add(pointLight);
+
+            const coreGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+            const coreMaterial = new THREE.MeshBasicMaterial({ color: 0x818cf8, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending });
+            glowCore = new THREE.Mesh(coreGeometry, coreMaterial);
+            entityGroup.add(glowCore);
+
+            const positions = new Float32Array(particleCount * 3);
+            const originalPositions = new Float32Array(particleCount * 3);
+            const colors = new Float32Array(particleCount * 3);
+            const colorInside = new THREE.Color("#818cf8");
+            const colorOutside = new THREE.Color("#38bdf8");
+
+            for (let i = 0; i < particleCount; i++) {
+                const i3 = i * 3;
+                const radius = (Math.random() * 2.0) + 0.5;
+                const phi = Math.acos(2 * Math.random() - 1);
+                const theta = THREE.MathUtils.randFloatSpread(2 * Math.PI);
+                const x = radius * Math.cos(theta) * Math.sin(phi);
+                const y = radius * Math.sin(theta) * Math.sin(phi);
+                const z = radius * Math.cos(phi);
+                positions.set([x, y, z], i3);
+                originalPositions.set([x, y, z], i3);
+                const mixedColor = colorInside.clone().lerp(colorOutside, (radius - 0.5) / 2.0);
+                colors.set([mixedColor.r, mixedColor.g, mixedColor.b], i3);
+            }
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('originalPosition', new THREE.BufferAttribute(originalPositions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            const material = new THREE.PointsMaterial({ size: 0.05, vertexColors: true, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, sizeAttenuation: true });
+            particleSystem = new THREE.Points(geometry, material);
+            entityGroup.add(particleSystem);
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }, false);
+            
+            const handleInteractionMove = (event) => {
+                let x, y;
+                if (event.touches) { x = event.touches[0].clientX; y = event.touches[0].clientY; }
+                else { x = event.clientX; y = event.clientY; }
+                mouse.x = (x / window.innerWidth) * 2 - 1;
+                mouse.y = -(y / window.innerHeight) * 2 + 1;
+            };
+            window.addEventListener('mousemove', handleInteractionMove);
+            window.addEventListener('touchmove', handleInteractionMove);
+
+            animate();
+        }
+
+        const bootUpDuration = 3; // seconds
+
+        function animate() {
+            const elapsedTime = clock.getElapsedTime();
+            
+            if (systemState === 'booting') {
+                const progress = Math.min((elapsedTime - bootStartTime) / bootUpDuration, 1.0);
+                const easedProgress = 1 - Math.pow(1 - progress, 3);
+                
+                const scale = THREE.MathUtils.lerp(0.01, 1.0, easedProgress);
+                entityGroup.scale.set(scale, scale, scale);
+                starField.material.opacity = THREE.MathUtils.lerp(1.0, 0.5, easedProgress);
+                particleSystem.rotation.y = elapsedTime * 3;
+                
+                if (progress >= 1.0) {
+                    systemState = 'active';
+                    captionText.textContent = 'Hold [SPACE] or [CLICK] to talk • Click during speech to interrupt';
+                    // Play Jarvis startup audio after boot completion
+                    setTimeout(() => {
+                        playStartupAudio();
+                    }, 500); // Small delay to let the boot sequence complete
+                    // Activate push-to-talk after boot
+                    setTimeout(() => {
+                        if (!window.pttListenersActive) {
+                            activatePushToTalk();
+                        }
+                    }, 1000);
+                }
+            } else if (systemState === 'active') {
+                starField.rotation.y = elapsedTime * 0.01;
+                starField.rotation.x = elapsedTime * 0.005;
+
+                entityGroup.position.x = Math.sin(elapsedTime * 0.2) * 0.2;
+                entityGroup.position.y = Math.cos(elapsedTime * 0.3) * 0.15;
+
+                const beatSpeed = isAISpeaking || isAIThinking ? 12 : 3;
+                const beatIntensity = isAISpeaking || isAIThinking ? 0.20 : 0.08;
+                const time = elapsedTime * beatSpeed;
+                const beat = (Math.sin(time) * 0.5 + 0.5) * (Math.sin(time * 0.5) * 0.5 + 0.5);
+                const scaleTarget = 1 + beat * beatIntensity;
+                entityGroup.scale.lerp(new THREE.Vector3(scaleTarget, scaleTarget, scaleTarget), 0.1);
+                
+                pointLight.intensity = THREE.MathUtils.lerp(pointLight.intensity, isAISpeaking || isAIThinking ? 8.0 : 2.5, 0.1);
+
+                const positions = particleSystem.geometry.attributes.position.array;
+                const originalPositions = particleSystem.geometry.attributes.originalPosition.array;
+                
+                const worldMouse = new THREE.Vector3(mouse.x, mouse.y, 0.5);
+                worldMouse.unproject(camera);
+                const dir = worldMouse.sub(camera.position).normalize();
+                const distance = -camera.position.z / dir.z;
+                const mousePos3D = camera.position.clone().add(dir.multiplyScalar(distance));
+                
+                for (let i = 0; i < positions.length; i += 3) {
+                    const vertex = new THREE.Vector3(originalPositions[i], originalPositions[i+1], originalPositions[i+2]);
+                    const dist = vertex.distanceTo(mousePos3D);
+                    if (dist < 1.5) {
+                        const force = 1.5 - dist;
+                        const pushVector = vertex.clone().sub(mousePos3D).normalize().multiplyScalar(force * 0.2);
+                        vertex.add(pushVector);
+                    }
+                    const currentVertex = new THREE.Vector3(positions[i], positions[i+1], positions[i+2]);
+                    currentVertex.lerp(vertex, 0.1);
+                    positions.set([currentVertex.x, currentVertex.y, currentVertex.z], i);
+                }
+                particleSystem.geometry.attributes.position.needsUpdate = true;
+                particleSystem.rotation.y = elapsedTime * 0.1;
+                particleSystem.rotation.x = elapsedTime * 0.05;
+            }
+
+            renderer.render(scene, camera);
+            requestAnimationFrame(animate);
+        }
+
+        function initAudio() {
+            if (audioInitialized) return;
+            
+            // Force audio context to start for mobile devices
+            if (Tone.context.state === 'suspended') {
+                Tone.context.resume();
+            }
+            
+            Tone.start().then(() => {
+                activationSynth = new Tone.Synth({ 
+                    oscillator: { type: 'sine' }, 
+                    envelope: { attack: 0.01, decay: 0.2, sustain: 0.2, release: 0.5 } 
+                }).toDestination();
+                
+                deactivationSynth = new Tone.NoiseSynth({ 
+                    noise: { type: 'white' }, 
+                    envelope: { attack: 0.005, decay: 0.1, sustain: 0 } 
+                }).toDestination();
+                
+                audioInitialized = true;
+                console.log('🔊 Audio initialized successfully');
+            }).catch(err => {
+                console.error('Audio initialization failed:', err);
+                audioInitialized = true; // Continue without sound effects
+            });
+        }
+
+        function playStartupAudio() {
+            if (startupAudio) {
+                startupAudio.volume = 0.8; // Set volume to 80%
+                startupAudio.play().catch(error => {
+                    console.log('Startup audio playback failed:', error);
+                });
+            }
+        }
+
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition;
+        let isRecognitionActive = false;
+        let finalTranscript = '';
+        
+        // Whisper streaming variables
+        let useWhisper = false;
+        let whisperAvailable = false;
+        let isWhisperRecording = false;
+
+        // Check if Whisper is available on server
+        async function checkWhisperAvailability() {
+            try {
+                const response = await fetch('/api/whisper/status');
+                const status = await response.json();
+                whisperAvailable = status.whisper_available;
+                
+                if (whisperAvailable) {
+                    console.log('✅ Whisper available - using high-accuracy speech recognition');
+                    useWhisper = true;
+                } else {
+                    console.log('⚠️ Whisper not available - falling back to Web Speech API');
+                    useWhisper = false;
+                }
+            } catch (error) {
+                console.log('❌ Could not check Whisper status, using Web Speech API');
+                useWhisper = false;
+            }
+        }
+
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'en-US';
+
+            recognition.onstart = () => {
+                isRecognitionActive = true;
+                captionText.textContent = 'Listening...';
+                captionText.classList.add('listening');
+                captionText.classList.remove('speaking', 'thinking');
+                if (activationSynth) activationSynth.triggerAttackRelease('C5', '8n');
+            };
+
+            recognition.onresult = (event) => {
+                let interimTranscript = '';
+                finalTranscript = '';
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        finalTranscript += event.results[i][0].transcript;
+                    } else {
+                        interimTranscript += event.results[i][0].transcript;
+                    }
+                }
+                captionText.textContent = interimTranscript || finalTranscript || 'Listening...';
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                captionText.textContent = 'Mic error. Please try again.';
+                isRecognitionActive = false;
+            };
+            
+            recognition.onend = () => {
+                isRecognitionActive = false;
+                if (!isAISpeaking && !isAIThinking && finalTranscript.trim()) {
+                    console.log('Processing voice input:', finalTranscript.trim());
+                    handleQuery(finalTranscript.trim());
+                } else if (!isAISpeaking && !isAIThinking) {
+                    captionText.textContent = 'Hold [SPACE] or [CLICK] to talk • Click during speech to interrupt';
+                    captionText.classList.remove('listening', 'speaking', 'thinking');
+                }
+            };
+        } else {
+            captionText.textContent = "Sorry, your browser doesn't support voice commands.";
+        }
+        
+        let sentenceQueue = [];
+        let currentlyStreaming = false;
+        let isSpeakingQueue = false;
+        let streamBuffer = '';
+
+        function speak(text) {
+            // Stop any current speech
+            stopCurrentSpeech();
+            
+            captionText.classList.remove('listening', 'thinking');
+            captionText.classList.add('speaking');
+
+            if (!('speechSynthesis' in window)) {
+                captionText.textContent = text;
+                return;
+            }
+            
+            // Split text into lines/sentences for progressive display
+            currentSpeechLines = text.split(/[.!?]+/).filter(line => line.trim().length > 0);
+            currentLineIndex = 0;
+            speechInterrupted = false;
+            
+            speakNextLine();
+        }
+
+        function startProgressiveSpeech(text) {
+            // Initialize progressive speech
+            progressiveSpeechText = text;
+            progressiveSpeechComplete = false;
+            progressiveSpeechQueue = [];
+            
+            // Stop any current speech
+            stopCurrentSpeech();
+            
+            captionText.classList.remove('listening', 'thinking');
+            captionText.classList.add('speaking');
+
+            if (!('speechSynthesis' in window)) {
+                captionText.textContent = text;
+                return;
+            }
+            
+            isAISpeaking = true;
+            speechInterrupted = false;
+            
+            // Start speaking the first batch
+            speakProgressiveBatch(text);
+        }
+        
+        function updateProgressiveSpeech(newText) {
+            progressiveSpeechText = newText;
+            
+            // Update the caption display in real-time
+            if (!speechInterrupted) {
+                captionText.textContent = newText;
+            }
+        }
+        
+        function completeProgressiveSpeech(finalText) {
+            progressiveSpeechComplete = true;
+            progressiveSpeechText = finalText;
+        }
+        
+        function speakProgressiveBatch(text) {
+            if (speechInterrupted) return;
+            
+            // Find a good break point (end of sentence or clause)
+            let speakUpTo = text.length;
+            const breakPoints = ['. ', '! ', '? ', ', ', '; '];
+            
+            // If text is longer than 100 chars, find a break point
+            if (text.length > 100) {
+                for (let i = 80; i < Math.min(text.length, 150); i++) {
+                    for (const breakPoint of breakPoints) {
+                        if (text.substr(i, breakPoint.length) === breakPoint) {
+                            speakUpTo = i + breakPoint.length;
+                            break;
+                        }
+                    }
+                    if (speakUpTo < text.length) break;
+                }
+            }
+            
+            const textToSpeak = text.substring(0, speakUpTo);
+            const remainingText = text.substring(speakUpTo);
+            
+            console.log('Speaking batch:', textToSpeak);
+            captionText.textContent = textToSpeak;
+            
+            const utterance = new SpeechSynthesisUtterance(textToSpeak);
+            utterance.rate = 1.0;
+            utterance.pitch = 1.0;
+            utterance.volume = 1.0;
+            
+            utterance.onend = () => {
+                if (speechInterrupted) return;
+                
+                if (remainingText.trim().length > 0) {
+                    // Continue with remaining text
+                    setTimeout(() => {
+                        if (!speechInterrupted) {
+                            speakProgressiveBatch(progressiveSpeechText);
+                        }
+                    }, 100);
+                } else if (progressiveSpeechComplete) {
+                    // We've finished everything
+                    finishSpeech();
+                } else {
+                    // Wait for more content to arrive
+                    setTimeout(() => {
+                        if (!speechInterrupted && progressiveSpeechText.length > textToSpeak.length) {
+                            speakProgressiveBatch(progressiveSpeechText);
+                        } else if (progressiveSpeechComplete) {
+                            finishSpeech();
+                        }
+                    }, 500);
+                }
+            };
+            
+            utterance.onerror = () => {
+                console.error('Speech synthesis error');
+                finishSpeech();
+            };
+            
+            speechSynthesis.speak(utterance);
+        }
+        
+        function speakNextLine() {
+            if (speechInterrupted || currentLineIndex >= currentSpeechLines.length) {
+                finishSpeech();
+                return;
+            }
+            
+            const line = currentSpeechLines[currentLineIndex].trim();
+            if (!line) {
+                currentLineIndex++;
+                speakNextLine();
+                return;
+            }
+            
+            // Display current line
+            captionText.textContent = line;
+            
+            // Create utterance for current line
+            currentUtterance = new SpeechSynthesisUtterance(line);
+            currentUtterance.rate = 0.9; // Slightly slower for better comprehension
+            currentUtterance.volume = 0.8;
+            
+            currentUtterance.onstart = () => { 
+                isAISpeaking = true; 
+            };
+            
+            currentUtterance.onend = () => { 
+                if (!speechInterrupted) {
+                    currentLineIndex++;
+                    // Small pause between lines
+                    setTimeout(() => {
+                        if (!speechInterrupted) {
+                            speakNextLine();
+                        }
+                    }, 300);
+                }
+            };
+            
+            currentUtterance.onerror = (e) => {
+                console.error('Speech synthesis error:', e);
+                finishSpeech();
+            };
+            
+            window.speechSynthesis.speak(currentUtterance);
+        }
+        
+        function stopCurrentSpeech() {
+            speechInterrupted = true;
+            if (window.speechSynthesis.speaking) {
+                window.speechSynthesis.cancel();
+            }
+            if (currentUtterance) {
+                currentUtterance = null;
+            }
+        }
+        
+        function finishSpeech() {
+            console.log('Finishing speech, resetting states');
+            isAISpeaking = false;
+            speechInterrupted = false;
+            currentUtterance = null;
+            currentSpeechLines = [];
+            currentLineIndex = 0;
+            
+            // Reset sentence queue state
+            isSpeakingQueue = false;
+            sentenceQueue = [];
+            streamBuffer = '';
+            currentlyStreaming = false;
+            isAIThinking = false; // Ensure thinking state is also reset
+            
+            // Force audio context resume for mobile Safari
+            if (Tone.context.state === 'suspended') {
+                Tone.context.resume();
+            }
+            
+            if (deactivationSynth) deactivationSynth.triggerAttackRelease('0.2');
+            
+            // Always reset to listening mode after a brief delay
+            setTimeout(() => {
+                resetToListeningMode();
+                
+                if (systemState === 'active' && !window.pttListenersActive) {
+                    activatePushToTalk();
+                }
+            }, 500); // Small delay to ensure everything is reset
+        }
+
+        async function sendToJarvis(message) {
+            console.log('Sending message to JARVIS:', message);
+            isAIThinking = true;
+            captionText.textContent = 'Thinking...';
+            captionText.classList.add('thinking');
+            captionText.classList.remove('listening', 'speaking');
+            
+            // Reset sentence streaming state
+            sentenceQueue = [];
+            currentlyStreaming = false;
+            isSpeakingQueue = false;
+            streamBuffer = '';
+            
+            try {
+                // Use ONLY streaming API for consistent responses
+                console.log('Making streaming API call...');
+                const streamResponse = await fetch('/api/chat/stream', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: message })
+                });
+
+                if (!streamResponse.ok) {
+                    throw new Error(`HTTP ${streamResponse.status}: ${streamResponse.statusText}`);
+                }
+
+                console.log('Stream response received, processing...');
+                currentlyStreaming = true;
+                const reader = streamResponse.body.getReader();
+                let fullResponse = '';
+                let hasContent = false;
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) {
+                        console.log('Stream reading complete');
+                        break;
+                    }
+                    
+                    const chunk = new TextDecoder().decode(value);
+                    const lines = chunk.split('\n');
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.slice(6));
+                                if (data.content) {
+                                    streamBuffer += data.content;
+                                    fullResponse += data.content;
+                                    hasContent = true;
+                                    
+                                    // Check for complete sentences and queue them
+                                    checkAndQueueCompleteSentences();
+                                }
+                                
+                                if (data.done) {
+                                    console.log('Stream marked as done, full response:', fullResponse);
+                                    isAIThinking = false;
+                                    currentlyStreaming = false;
+                                    
+                                    // Queue any remaining incomplete sentence
+                                    if (streamBuffer.trim().length > 0) {
+                                        console.log('Queueing remaining buffer:', streamBuffer.trim());
+                                        sentenceQueue.push(streamBuffer.trim());
+                                        streamBuffer = '';
+                                    }
+                                    
+                                    // Start speaking if we have content
+                                    if (hasContent && !isSpeakingQueue && sentenceQueue.length > 0) {
+                                        startSentenceQueue();
+                                    } else if (!hasContent) {
+                                        // No content received, reset to listening mode
+                                        console.log('No content received, resetting to listening mode');
+                                        resetToListeningMode();
+                                    }
+                                    
+                                    return { success: true, response: fullResponse, mode: 'stream_only' };
+                                }
+                            } catch (e) {
+                                console.error('Parse error:', e, 'Line:', line);
+                            }
+                        }
+                    }
+                }
+                
+                // If we get here without proper completion, reset states
+                console.log('Stream ended without completion flag, resetting states');
+                isAIThinking = false;
+                currentlyStreaming = false;
+                if (!hasContent) {
+                    resetToListeningMode();
+                }
+                
+                return { 
+                    success: hasContent, 
+                    response: fullResponse || 'No response received', 
+                    mode: 'stream_only' 
+                };
+                
+            } catch (error) {
+                console.error('Error communicating with Jarvis:', error);
+                isAIThinking = false;
+                currentlyStreaming = false;
+                resetToListeningMode();
+                
+                return { 
+                    success: false, 
+                    response: `Connection error: ${error.message}. Please check if the server is running.`
+                };
+            }
+        }
+
+        function resetToListeningMode() {
+            console.log('Resetting to listening mode');
+            isAIThinking = false;
+            isAISpeaking = false;
+            currentlyStreaming = false;
+            isSpeakingQueue = false;
+            captionText.textContent = 'Hold [SPACE] or [CLICK] to talk • Click during speech to interrupt';
+            captionText.classList.remove('thinking', 'speaking');
+        }
+
+        function checkAndQueueCompleteSentences() {
+            // Look for sentence endings: . ! ?
+            const sentenceEndings = /[.!?]/g;
+            let match;
+            let lastIndex = 0;
+            
+            while ((match = sentenceEndings.exec(streamBuffer)) !== null) {
+                // Extract complete sentence
+                const sentence = streamBuffer.substring(lastIndex, match.index + 1).trim();
+                if (sentence.length > 0) {
+                    console.log('Queuing sentence:', sentence);
+                    sentenceQueue.push(sentence);
+                    
+                    // Start speaking if not already started
+                    if (!isSpeakingQueue) {
+                        startSentenceQueue();
+                    }
+                }
+                lastIndex = match.index + 1;
+            }
+            
+            // Remove processed sentences from buffer
+            if (lastIndex > 0) {
+                streamBuffer = streamBuffer.substring(lastIndex);
+            }
+        }
+        
+        function startSentenceQueue() {
+            if (isSpeakingQueue || sentenceQueue.length === 0) return;
+            
+            isSpeakingQueue = true;
+            isAISpeaking = true;
+            speechInterrupted = false;
+            
+            captionText.classList.remove('listening', 'thinking');
+            captionText.classList.add('speaking');
+            
+            speakNextSentenceFromQueue();
+        }
+        
+        function speakNextSentenceFromQueue() {
+            if (speechInterrupted) {
+                finishSpeech();
+                return;
+            }
+            
+            // If no sentences in queue, check if streaming is still active
+            if (sentenceQueue.length === 0) {
+                if (currentlyStreaming) {
+                    // Wait for more sentences
+                    setTimeout(() => {
+                        if (!speechInterrupted) {
+                            speakNextSentenceFromQueue();
+                        }
+                    }, 200);
+                    return;
+                } else {
+                    // Streaming is done and no more sentences
+                    finishSpeech();
+                    return;
+                }
+            }
+            
+            const sentence = sentenceQueue.shift();
+            console.log('Speaking sentence:', sentence);
+            
+            // Update caption with current sentence
+            captionText.textContent = sentence;
+            
+            if (!('speechSynthesis' in window)) {
+                // Fallback: just display text and continue
+                setTimeout(() => speakNextSentenceFromQueue(), 2000);
+                return;
+            }
+            
+            const utterance = new SpeechSynthesisUtterance(sentence);
+            utterance.rate = 1.0;
+            utterance.pitch = 1.0;
+            utterance.volume = 1.0;
+            
+            utterance.onend = () => {
+                if (!speechInterrupted) {
+                    // Small pause between sentences
+                    setTimeout(() => {
+                        speakNextSentenceFromQueue();
+                    }, 300);
+                }
+            };
+            
+            utterance.onerror = () => {
+                console.error('Speech synthesis error for sentence:', sentence);
+                setTimeout(() => speakNextSentenceFromQueue(), 500);
+            };
+            
+            speechSynthesis.speak(utterance);
+        }
+
+        async function handleQuery(query) {
+            const result = await sendToJarvis(query);
+            console.log('JARVIS Response:', result); // Debug log
+            
+            if (result.success) {
+                console.log('Response mode:', result.mode); // Debug response mode
+                
+                // Stream-only mode handles speech automatically via sentence queue
+                if (result.mode === 'stream_only') {
+                    // Speech is already handled by the streaming sentence queue
+                    console.log('Stream response handled by sentence queue');
+                    
+                    // If no sentences were queued, reset to listening mode
+                    setTimeout(() => {
+                        if (!isAISpeaking && !isSpeakingQueue && !isAIThinking) {
+                            resetToListeningMode();
+                        }
+                    }, 1000);
+                } else {
+                    // Fallback: speak the full response
+                    console.log('Speaking full response:', result.response);
+                    speak(result.response);
+                }
+            } else {
+                console.log('Error response, speaking error message');
+                speak(result.response || 'I am having trouble connecting to my AI brain.');
+                // Reset to listening mode after error
+                setTimeout(() => {
+                    if (!isAISpeaking) {
+                        resetToListeningMode();
+                    }
+                }, 3000);
+            }
+        }
+        
+        async function startListening() {
+            // If AI is speaking, interrupt the speech
+            if (isAISpeaking) {
+                stopCurrentSpeech();
+                captionText.textContent = 'Hold [SPACE] or [CLICK] to talk • Click during speech to interrupt';
+                return;
+            }
+            
+            if (systemState !== 'active' || isAIThinking) return;
+            
+            if (useWhisper && whisperAvailable) {
+                // Use Whisper for speech recognition
+                if (!isWhisperRecording) {
+                    console.log('🎤 Starting Whisper recording...');
+                    isWhisperRecording = true;
+                    captionText.textContent = 'Listening (Whisper)...';
+                    captionText.classList.add('listening');
+                    captionText.classList.remove('speaking', 'thinking');
+                    if (activationSynth) activationSynth.triggerAttackRelease('C5', '8n');
+                    
+                    try {
+                        const response = await fetch('/api/whisper/start', { method: 'POST' });
+                        const result = await response.json();
+                        if (!result.success) {
+                            console.error('Failed to start Whisper recording:', result.error);
+                            isWhisperRecording = false;
+                            captionText.textContent = 'Whisper error. Using fallback...';
+                            // Fallback to Web Speech API
+                            useWhisper = false;
+                            startListening();
+                        }
+                    } catch (error) {
+                        console.error('Whisper API error:', error);
+                        isWhisperRecording = false;
+                        captionText.textContent = 'Connection error. Using fallback...';
+                        useWhisper = false;
+                        startListening();
+                    }
+                }
+            } else {
+                // Fallback to Web Speech API
+                if (recognition && !isRecognitionActive) {
+                    finalTranscript = '';
+                    recognition.start();
+                }
+            }
+        }
+
+        async function stopListening() {
+            if (useWhisper && whisperAvailable && isWhisperRecording) {
+                // Stop Whisper recording
+                console.log('🎤 Stopping Whisper recording...');
+                isWhisperRecording = false;
+                captionText.textContent = 'Processing...';
+                
+                try {
+                    const response = await fetch('/api/whisper/stop', { method: 'POST' });
+                    const result = await response.json();
+                    
+                    if (result.success && result.transcription.trim()) {
+                        console.log('Whisper transcribed:', result.transcription);
+                        finalTranscript = result.transcription.trim();
+                        
+                        if (!isAISpeaking && !isAIThinking) {
+                            handleQuery(finalTranscript);
+                        }
+                    } else {
+                        console.log('No transcription from Whisper');
+                        captionText.textContent = 'Hold [SPACE] or [CLICK] to talk • Click during speech to interrupt';
+                        captionText.classList.remove('listening', 'speaking', 'thinking');
+                    }
+                } catch (error) {
+                    console.error('Whisper stop error:', error);
+                    captionText.textContent = 'Hold [SPACE] or [CLICK] to talk • Click during speech to interrupt';
+                    captionText.classList.remove('listening', 'speaking', 'thinking');
+                }
+            } else {
+                // Web Speech API
+                if (recognition && isRecognitionActive) {
+                    recognition.stop();
+                }
+            }
+        }
+
+        function activatePushToTalk() {
+            window.pttListenersActive = true;
+            
+            // Check if we're on a mobile/tablet device
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            
+            if (isMobile) {
+                // Show touch-friendly button for mobile/tablet
+                const pttButton = document.getElementById('ptt-button');
+                pttButton.style.display = 'flex';
+                pttButton.style.flexDirection = 'column';
+                pttButton.style.justifyContent = 'center';
+                pttButton.style.alignItems = 'center';
+                
+                // Touch events for mobile PTT button
+                pttButton.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    pttButton.classList.add('listening');
+                    startListening();
+                });
+                
+                pttButton.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    pttButton.classList.remove('listening');
+                    stopListening();
+                });
+                
+                // Prevent text selection and context menu
+                pttButton.addEventListener('selectstart', (e) => e.preventDefault());
+                pttButton.addEventListener('contextmenu', (e) => e.preventDefault());
+                
+            } else {
+                // Desktop: canvas click and keyboard events
+                const canvas = document.getElementById('ai-canvas');
+                canvas.addEventListener('mousedown', startListening);
+                canvas.addEventListener('mouseup', stopListening);
+                
+                window.addEventListener('keydown', (e) => {
+                    if (e.code === 'Space' && !e.repeat) {
+                        e.preventDefault();
+                        startListening();
+                    }
+                });
+                window.addEventListener('keyup', (e) => {
+                    if (e.code === 'Space') {
+                        e.preventDefault();
+                        stopListening();
+                    }
+                });
+            }
+        }
+
+        // --- TEST FUNCTION ---
+        function testSystem() {
+            console.log('🧪 Testing system with "Hello" message...');
+            handleQuery('Hello');
+        }
+
+        // --- INITIALIZATION ---
+        init3D();
+        
+        // Initialize Whisper availability check
+        checkWhisperAvailability();
+        
+        // Initial boot sequence trigger (prevent canvas selection)
+        const canvas = document.getElementById('ai-canvas');
+        const bootTrigger = (e) => {
+            if (systemState === 'pending') {
+                e.preventDefault();
+                e.stopPropagation();
+                initAudio();
+                systemState = 'booting';
+                bootStartTime = clock.getElapsedTime();
+                captionText.textContent = 'Booting up...';
+                
+                // Remove the boot trigger after first use
+                canvas.removeEventListener('click', bootTrigger);
+                canvas.removeEventListener('touchstart', bootTrigger);
+            }
+        };
+        
+        canvas.addEventListener('click', bootTrigger, { once: true });
+        canvas.addEventListener('touchstart', bootTrigger, { once: true });
+        
+        // Prevent text selection on canvas
+        canvas.addEventListener('selectstart', (e) => e.preventDefault());
+        canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    </script>
+</body>
+</html>

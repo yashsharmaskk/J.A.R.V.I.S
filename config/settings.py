@@ -17,7 +17,7 @@ class AudioConfig(BaseSettings):
     record_duration: float = Field(default=5.0, description="Default recording duration in seconds")
     
     # Whisper settings
-    whisper_model: str = Field(default="tiny", description="Whisper model size (tiny, base, small, medium, large)")
+    whisper_model: str = Field(default="base", description="Whisper model size (tiny, base, small, medium, large)")
     
     # TTS settings
     tts_rate: int = Field(default=180, description="Text-to-speech rate (words per minute)")
@@ -31,9 +31,9 @@ class AIConfig(BaseSettings):
     """AI model configuration."""
     
     # Ollama settings  
-    ollama_url: str = Field(default="http://localhost:11434", description="Ollama API base URL")
-    ollama_model: str = Field(default="llama3.1", description="Ollama model name")
-    timeout: float = Field(default=30.0, description="Ollama request timeout in seconds")
+    ollama_base_url: str = Field(default="http://localhost:11434", description="Ollama API base URL")
+    ollama_model: str = Field(default="phi3:mini", description="Ollama model name")
+    ollama_timeout: float = Field(default=30.0, description="Ollama request timeout in seconds")
     
     # AI behavior
     temperature: float = Field(default=0.7, description="AI response randomness (0.0 to 1.0)")
@@ -75,15 +75,18 @@ class JarvisConfig(BaseSettings):
 # Personality system prompts
 PERSONALITY_PROMPTS = {
     "professional_assistant": """You are Jarvis, a professional AI assistant. You are helpful, concise, and polite. 
-    Address the user respectfully and provide clear, informative responses. Keep responses brief but complete.""",
+    Address the user respectfully and provide clear, informative responses. Keep responses brief but complete. 
+    IMPORTANT: Always provide direct answers to questions. Do not ask follow-up questions unless absolutely necessary.""",
     
     "iron_man_jarvis": """You are J.A.R.V.I.S., the AI assistant from Iron Man. You are sophisticated, witty, 
     and occasionally display dry humor. Address the user as 'sir' or 'madam' appropriately. You are highly 
-    intelligent and capable, with a slight British accent in your speech patterns.""",
+    intelligent and capable, with a slight British accent in your speech patterns. IMPORTANT: Provide direct 
+    answers to questions. Give definitive responses based on available information.""",
     
     "friendly_helper": """You are Jarvis, a friendly and enthusiastic AI assistant. You're eager to help 
     and maintain a warm, conversational tone. You enjoy learning about the user and remembering context 
-    from your conversations."""
+    from your conversations. IMPORTANT: Give direct, helpful answers. Only ask clarifying questions if 
+    the request is genuinely unclear."""
 }
 
 

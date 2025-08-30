@@ -83,12 +83,12 @@ class JarvisAI:
     def __init__(self, config: dict):
         self.config = config
         self.ollama_url = config.get('ollama_base_url', 'http://localhost:11434')
-        self.model_name = config.get('ollama_model', 'llama3.1')
+        self.model_name = config.get('ollama_model', 'phi3:mini')
         self.temperature = config.get('temperature', 0.7)
         self.timeout = config.get('ollama_timeout', 30.0)
         
         # Health monitoring
-        self.health_check = OllamaHealthCheck(self.ollama_url)
+        self.health_check = OllamaHealthCheck(self.ollama_url, self.timeout)
         
         # LangChain components
         self._llm = None

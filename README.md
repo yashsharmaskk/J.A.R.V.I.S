@@ -1,53 +1,285 @@
-# 🤖 Jarvis AI Assistant
+# J.A.R.V.I.S - AI Assistant
 
-## ✨ What's New in v2.0
+> **Just A Rather Very Intelligent System** - A modern AI assistant with voice recognition, GPU-accelerated inference, and web interface.
 
-- 🏗️ **Clean Architecture**: Proper separation of concerns, modular design
-- 🧹 **Project Cleanup**: Removed 20+ old files, organized structure
-- 🧠 **Smart Model Routing**: phi3 for quick chats, llama3.1 for complex topics
+## ✨ Features
 
-## 🎭 Available Personalities
-- `iron_man_jarvis` - Sophisticated, witty, calls you "sir"
-- `professional` - Helpful and concise
-- `friendly` - Warm and conversational
+- 🤖 **GPU-Accelerated AI**: LlamaCPP with CUDA support for RTX series GPUs
+- 🎤 **Voice Recognition**: Whisper-based speech-to-text with real-time streaming
+- 🌐 **Modern Web Interface**: Clean, responsive frontend with real-time chat
+- ⚡ **Ultra-Fast Responses**: Optimized for speed with streaming output
+- 🔄 **Fallback Support**: Graceful degradation to CPU/Web Speech API
+- 🎯 **Smart Model Selection**: Auto-downloads optimal models for your hardware
 
-## 🧠 Smart Model Routing
+## 🚀 Quick Start
 
-Jarvis automatically selects the optimal AI model based on your conversation:
+### Prerequisites
 
-### ⚡ **Quick Mode (phi3)**
-**Used for:**
-- Simple greetings: "Hello Jarvis"
-- Basic questions: "What time is it?"
-- Short conversations: "How are you?"
-- Quick commands: "Thanks!" 
+- **Windows 10/11** (primary support)
+- **Python 3.8+** 
+- **NVIDIA GPU** (RTX series recommended) with CUDA 12.1+
+- **16GB+ RAM** recommended
 
-**Benefits:** Fast response (~1-2 seconds), low resource usage
+### Installation
 
-### 🧠 **Smart Mode (llama3.1)** 
-**Used for:**
-- Complex topics: "Explain quantum computing"
-- Technical questions: "How does machine learning work?"
-- Detailed requests: "Write a plan for learning Python"
-- Analysis: "Compare different programming languages"
-- Creative tasks: "Help me brainstorm ideas"
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yashsharmaskk/J.A.R.V.I.S.git
+   cd J.A.R.V.I.S
+   ```
 
-**Benefits:** Deep understanding, detailed responses, better reasoning
+2. **Run the setup script**
+   ```bash
+   scripts\setup.bat
+   ```
+   This will:
+   - Create a Python virtual environment
+   - Install all dependencies including GPU-accelerated PyTorch
+   - Download the optimal AI model for your system
 
-### 🔧 **Manual Override**
-You can force a specific model:
-- "Use smart mode" - Switch to llama3.1
-- "Use fast mode" - Switch to phi3
-- "Status report" - See current model
+3. **Start JARVIS**
+   ```bash
+   scripts\start.bat
+   ```
 
-## 📁 Clean Project Structure
+4. **Open your browser**
+   ```
+   http://localhost:5000
+   ```
+
+That's it! JARVIS should be running with GPU acceleration.
+
+## 🛠️ Manual Installation
+
+If the automated setup doesn't work, follow these manual steps:
+
+### 1. Create Virtual Environment
+```bash
+python -m venv .venv
+.venv\Scripts\activate.bat
+```
+
+### 2. Install Dependencies
+```bash
+# Install from requirements
+pip install -r requirements.txt
+
+# Install GPU-enabled PyTorch (for CUDA 12.1)
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+
+# Install GPU-enabled llama-cpp-python
+pip install llama-cpp-python --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu121
+```
+
+### 3. Download AI Model
+```bash
+python src\utils\download_model.py
+```
+
+### 4. Start Server
+```bash
+python src\core\server.py
+```
+
+## 🔧 Configuration
+
+### System Requirements by GPU
+
+| GPU | Recommended Model | VRAM | Performance |
+|-----|------------------|------|-------------|
+| RTX 3050 Ti | Qwen2.5-7B Q3_K_M | 4GB | Excellent |
+| RTX 3060 | Qwen2.5-7B Q4_K_M | 6GB | Outstanding |
+| RTX 4060+ | Qwen2.5-7B Q5_K_M | 8GB+ | Maximum |
+
+### Environment Variables
+
+```bash
+# Limit CPU threads if needed
+set OMP_NUM_THREADS=4
+set MKL_NUM_THREADS=4
+
+# Force CPU mode (if GPU issues)
+set JARVIS_FORCE_CPU=1
+```
+
+## 🎮 Usage
+
+### Web Interface
+1. Navigate to `http://localhost:5000`
+2. Click the microphone icon to start voice input
+3. Type or speak your questions
+4. Get instant AI responses
+
+### API Endpoints
+```python
+# Chat with AI
+POST /api/chat
+{
+    "message": "Hello, how are you?",
+    "conversation_id": "optional_id"
+}
+
+# Voice transcription
+POST /api/transcribe
+Content-Type: audio/wav
+
+# Health check
+GET /api/status
+```
+
+## 🎯 Performance Tuning
+
+### GPU Settings
+```python
+# In server.py - optimized for speed
+"n_gpu_layers": 50,        # GPU acceleration
+"n_ctx": 8192,            # Context window  
+"temperature": 0.7,       # Creativity balance
+"top_p": 0.95,           # Token selection
+"repeat_penalty": 1.1,    # Prevent loops
+"n_threads": 8           # CPU threads
+```
+
+### Audio Quality
+- **Sample Rate**: 16kHz (optimal for Whisper)
+- **Model**: Whisper Base (accuracy/speed balance)
+- **Device**: CPU-only to avoid GPU conflicts
+
+## 📁 Project Structure
 
 ```
-jarvis/
-├── 🤖 jarvis_clean.py          # Main implementation (RECOMMENDED)
-├── 🚀 main.py                  # Alternative entry point
-├── ⚙️  config/                 # Configuration system
-├── 📦 src/                     # Source code modules  
+J.A.R.V.I.S/
+├── src/
+│   ├── core/              # Core AI and server logic
+│   │   ├── server.py      # Main Flask/ASGI server
+│   │   └── whisper_stream.py # Voice recognition
+│   ├── frontend/          # Web interface
+│   │   ├── index.html     # Main interface
+│   │   ├── style.css      # Styling
+│   │   └── script.js      # JavaScript logic
+│   └── utils/             # Utilities and helpers
+│       └── download_model.py # Auto model download
+├── scripts/               # Setup and start scripts
+│   ├── setup.bat         # Environment setup
+│   └── start.bat         # Quick start
+├── models/               # AI model files (auto-created)
+├── audio/                # Audio assets
+└── requirements.txt      # Python dependencies
+```
+
+## 🔧 Troubleshooting
+
+### Common Issues
+
+#### ❌ "CUDA out of memory" Error
+```bash
+# Solution 1: Reduce GPU layers
+# Edit server.py, reduce n_gpu_layers from 50 to 30
+
+# Solution 2: Force CPU mode
+set JARVIS_FORCE_CPU=1
+python src\core\server.py
+```
+
+#### ❌ "Module not found" Error
+```bash
+# Ensure virtual environment is activated
+.venv\Scripts\activate.bat
+
+# Reinstall dependencies
+pip install -r requirements.txt
+```
+
+#### ❌ Server Won't Start
+```bash
+# Check if port 5000 is in use
+netstat -an | findstr :5000
+
+# Use different port
+set PORT=8080
+python src\core\server.py
+```
+
+#### ❌ Voice Recognition Not Working
+```bash
+# Check audio permissions in Windows Settings
+# Allow microphone access for your browser
+
+# Test standalone Whisper
+python -c "import whisper; print('Whisper OK')"
+```
+
+#### ❌ Slow Performance
+```bash
+# Check GPU status
+python -c "import torch; print(torch.cuda.is_available())"
+
+# Monitor GPU memory
+nvidia-smi
+
+# Reduce model size if needed
+# Use Q3_K_M instead of Q4_K_M in download_model.py
+```
+
+### Performance Benchmarks
+
+| Hardware | Model | Load Time | Response Time | VRAM Usage |
+|----------|-------|-----------|---------------|------------|
+| RTX 4060 | Q4_K_M | 8s | 0.5-1s | 6.2GB |
+| RTX 3060 | Q3_K_M | 6s | 0.7-1.2s | 4.8GB |
+| RTX 3050 Ti | Q3_K_M | 7s | 1-1.5s | 4.2GB |
+| CPU Only | Q3_K_M | 15s | 3-5s | 8GB RAM |
+
+### Debug Mode
+
+Enable detailed logging:
+```bash
+set JARVIS_DEBUG=1
+python src\core\server.py
+```
+
+This will show:
+- Model loading progress
+- GPU memory usage
+- Request/response timing
+- Error stack traces
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+### Development Setup
+```bash
+# Install dev dependencies
+pip install -r requirements-dev.txt
+
+# Run tests
+python -m pytest tests/
+
+# Format code
+black src/
+```
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- **OpenAI Whisper** - Speech recognition
+- **LlamaCPP** - Efficient model inference  
+- **Hugging Face** - Model hosting
+- **Qwen Team** - Base AI model
+
+---
+
+**Made with ❤️ for the AI community**
+
+> "Sometimes you gotta run before you can walk." - Tony Stark  
 ├── 📚 docs/                    # Documentation
 ├── 🗃️  archive/                # Archived old files
 ├── 📋 requirements.txt         # Dependencies

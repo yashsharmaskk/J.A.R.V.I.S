@@ -66,7 +66,7 @@ class AudioProcessor:
 class SpeechRecognizer:
     """Speech-to-text using Whisper."""
     
-    def __init__(self, model_size: str = "tiny"):
+    def __init__(self, model_size: str = "base"):
         self.model_size = model_size
         self._model = None
         self._load_model()
@@ -167,7 +167,7 @@ class AudioManager:
         )
         
         self.recognizer = SpeechRecognizer(
-            model_size=config.get('whisper_model', 'tiny')
+            model_size=config.get('whisper_model', 'base')
         )
         
         self.tts = TextToSpeech(
