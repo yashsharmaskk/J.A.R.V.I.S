@@ -1,29 +1,69 @@
-# Core web dependencies
+# ========================================
+# JARVIS AI Assistant - Complete Dependencies
+# One-time setup for all functionality
+# ========================================
+
+# Core Web Framework Dependencies
 flask>=2.3.0
 flask-cors>=4.0.0
 starlette>=0.27.0
 uvicorn[standard]>=0.22.0
 
-# AI & model dependencies
-llama-cpp-python>=0.1.50
-# Use exact local version labels for CUDA builds
-torch>=2.0.0; platform_system == "Windows"
-torchvision>=0.15.0; platform_system == "Windows"
-openai-whisper>=20231117
-pyaudio>=0.2.13
+# AI & LLM Dependencies
+llama-cpp-python>=0.2.90
+# For CUDA support, use: pip install llama-cpp-python --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu121
 
-# Audio processing
+# PyTorch (GPU/CPU support)
+torch>=2.0.0
+torchvision>=0.15.0
+torchaudio>=2.0.0
+
+# Whisper Speech Recognition
+openai-whisper>=20231117
+faster-whisper>=1.0.0
+
+# Audio Processing Dependencies
+pyaudio>=0.2.13
 sounddevice>=0.4.6
 numpy>=1.24.0
 
 # Text-to-Speech
 pyttsx3>=2.90
 
-# LangChain integrations (optional)
+# HTTP & Network
+requests>=2.31.0
+aiohttp>=3.8.0
+
+# Utilities & Logging
+rich>=13.0.0
+colorama>=0.4.6
+
+# Optional: LangChain Ecosystem (for advanced AI features)
 langchain>=0.1.0
 langchain-community>=0.0.10
 langchain-ollama>=0.1.0
 
-# Utilities
-requests>=2.31.0
-rich>=13.0.0
+# Optional: Advanced Audio Processing
+librosa>=0.10.0
+scipy>=1.10.0
+
+# Development & Debugging
+typing-extensions>=4.0.0
+pydantic>=2.0.0
+
+# ========================================
+# Installation Notes:
+# ========================================
+# 1. For GPU acceleration with CUDA 12.1:
+#    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+#
+# 2. For llama-cpp-python with CUDA:
+#    pip install llama-cpp-python --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu121
+#
+# 3. If PyAudio installation fails on Windows:
+#    pip install pipwin
+#    pipwin install pyaudio
+#
+# 4. Alternative Whisper (faster):
+#    pip install faster-whisper (already included above)
+# ========================================
