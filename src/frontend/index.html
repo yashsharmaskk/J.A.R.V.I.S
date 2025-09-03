@@ -76,23 +76,7 @@
             opacity: 1;
         }
         
-        /* Debug button */
-        #debug-button {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 100;
-            background: rgba(59, 130, 246, 0.8);
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        #debug-button:hover {
-            background: rgba(59, 130, 246, 1);
-        }
+    /* Debug button removed */
         
         .listening {
             color: #a5b4fc;
@@ -179,12 +163,7 @@
             100% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.5); }
         }
         
-        /* Hide debug button on mobile */
-        @media (max-width: 768px) {
-            #debug-button {
-                display: none;
-            }
-        }
+    /* Debug button removed - no mobile styles required */
     </style>
 </head>
 <body>
@@ -199,8 +178,6 @@
         <div>HOLD</div>
         <div>TO TALK</div>
     </button>
-    
-    <!-- Debug test button removed -->
     
     <!-- Jarvis startup audio -->
     <audio id="jarvis-startup-audio" preload="auto">
