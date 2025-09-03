@@ -16,8 +16,8 @@
 ### Prerequisites
 
 - **Windows 10/11** (primary support)
-- **Python 3.8+** 
-- **NVIDIA GPU** (RTX series recommended) with CUDA 12.1+
+- **Python 3.8+**
+- **NVIDIA GPU** (RTX series recommended) with CUDA 12.1+ (optional)
 - **16GB+ RAM** recommended
 
 ### Installation
@@ -29,7 +29,7 @@
    ```
 
 2. **Run the setup script**
-   ```bash
+   ```bat
    scripts\setup.bat
    ```
    This will:
@@ -38,7 +38,7 @@
    - Download the optimal AI model for your system
 
 3. **Start JARVIS**
-   ```bash
+   ```bat
    scripts\start.bat
    ```
 
@@ -60,15 +60,15 @@ python -m venv .venv
 ```
 
 ### 2. Install Dependencies
-```bash
+```bat
 # Install from requirements
 pip install -r requirements.txt
 
-# Install GPU-enabled PyTorch (for CUDA 12.1)
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+# Optional: Install GPU-enabled PyTorch (for CUDA 12.1)
+# pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 
-# Install GPU-enabled llama-cpp-python
-pip install llama-cpp-python --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu121
+# Optional: Install GPU-enabled llama-cpp-python (CUDA wheels)
+# pip install llama-cpp-python --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu121
 ```
 
 ### 3. Download AI Model
@@ -111,21 +111,50 @@ set JARVIS_FORCE_CPU=1
 4. Get instant AI responses
 
 ### API Endpoints
-```python
-# Chat with AI
-POST /api/chat
-{
-    "message": "Hello, how are you?",
-    "conversation_id": "optional_id"
-}
+The server exposes the following primary endpoints (see `src/core/server.py` for details):
 
-# Voice transcription
-POST /api/transcribe
-Content-Type: audio/wav
+- GET /api/status — server & model status (returns JSON)
 
-# Health check
-GET /api/status
-```
+   Example response:
+   ```json
+   {
+      "jarvis_status": "online",
+      "model_status": "loaded",
+      "model_path": "models/qwen2.5-7b-instruct-q3_k_m.gguf",
+      "llamacpp_available": true,
+      "gpu_available": false,
+      "loaded_on_gpu": false,
+      "load_device": "cpu",
+      "mode": "llamacpp_direct",
+      "version": "3.0.0 - LlamaCPP Direct",
+      "timestamp": 1693710000.0
+   }
+   ```
+
+- POST /api/chat/stream — streaming chat responses (SSE/text streaming)
+
+   Request JSON body:
+   ```json
+   {
+      "message": "Hello, how are you?"
+   }
+   ```
+
+   Response: returns a streamed text/plain response where each event line contains JSON with `content` and `done` flags. Use `/api/chat` only as a deprecated redirect to the streaming endpoint.
+
+- Whisper endpoints (available only if Whisper streaming is initialized):
+   - POST /api/whisper/start — start recording (returns success boolean)
+   - POST /api/whisper/stop — stop recording and return transcription
+   - GET /api/whisper/status — check whisper module/model availability
+
+   Example `/api/whisper/stop` response:
+   ```json
+   {
+      "success": true,
+      "transcription": "hello jarvis",
+      "message": "Transcribed: hello jarvis"
+   }
+   ```
 
 ## 🎯 Performance Tuning
 
@@ -154,72 +183,39 @@ J.A.R.V.I.S/
 │   │   ├── server.py      # Main Flask/ASGI server
 │   │   └── whisper_stream.py # Voice recognition
 │   ├── frontend/          # Web interface
-│   │   ├── index.html     # Main interface
-│   │   ├── style.css      # Styling
-│   │   └── script.js      # JavaScript logic
+│   │   └── index.html     # Main interface
 │   └── utils/             # Utilities and helpers
 │       └── download_model.py # Auto model download
 ├── scripts/               # Setup and start scripts
-│   ├── setup.bat         # Environment setup
-│   └── start.bat         # Quick start
-├── models/               # AI model files (auto-created)
-├── audio/                # Audio assets
-└── requirements.txt      # Python dependencies
+│   ├── setup.bat          # Environment setup
+│   └── start.bat          # Quick start
+├── models/                # AI model files (auto-created)
+├── requirements.txt       # Python dependencies
 ```
 
 ## 🔧 Troubleshooting
 
 ### Common Issues
 
-#### ❌ "CUDA out of memory" Error
-```bash
-# Solution 1: Reduce GPU layers
-# Edit server.py, reduce n_gpu_layers from 50 to 30
+❌ "CUDA out of memory"
+- Reduce `n_gpu_layers` in `src/core/server.py` or use smaller model
+- Force CPU mode: `set JARVIS_FORCE_CPU=1` before starting the server
 
-# Solution 2: Force CPU mode
-set JARVIS_FORCE_CPU=1
-python src\core\server.py
-```
+❌ "Module not found"
+- Activate virtualenv: `.venv\Scripts\activate.bat`
+- Reinstall: `pip install -r requirements.txt`
 
-#### ❌ "Module not found" Error
-```bash
-# Ensure virtual environment is activated
-.venv\Scripts\activate.bat
+❌ Server won't start
+- Check if port 5000 is in use: `netstat -an | findstr :5000`
+- Use a different port: `set PORT=8080` then start
 
-# Reinstall dependencies
-pip install -r requirements.txt
-```
+❌ Voice recognition not working
+- Browser microphone permissions
+- If `whisper` or `pyaudio` are missing, the server will use Web Speech API fallback
 
-#### ❌ Server Won't Start
-```bash
-# Check if port 5000 is in use
-netstat -an | findstr :5000
-
-# Use different port
-set PORT=8080
-python src\core\server.py
-```
-
-#### ❌ Voice Recognition Not Working
-```bash
-# Check audio permissions in Windows Settings
-# Allow microphone access for your browser
-
-# Test standalone Whisper
-python -c "import whisper; print('Whisper OK')"
-```
-
-#### ❌ Slow Performance
-```bash
-# Check GPU status
-python -c "import torch; print(torch.cuda.is_available())"
-
-# Monitor GPU memory
-nvidia-smi
-
-# Reduce model size if needed
-# Use Q3_K_M instead of Q4_K_M in download_model.py
-```
+❌ Slow performance
+- Check GPU status: `python -c "import torch; print(torch.cuda.is_available())"`
+- Monitor GPU memory: `nvidia-smi`
 
 ### Performance Benchmarks
 
@@ -233,28 +229,16 @@ nvidia-smi
 ### Debug Mode
 
 Enable detailed logging:
-```bash
-set JARVIS_DEBUG=1
-python src\core\server.py
-```
+---
 
-This will show:
-- Model loading progress
-- GPU memory usage
-- Request/response timing
-- Error stack traces
+**Made with ❤️ for the AI community**
 
-## 🤝 Contributing
+If you'd like, I can also:
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+- Add a short `README` badge section for quick status
+- Create a minimal `requirements-dev.txt` for contributors
+- Update `README.md` further to include exact API examples from `src/core/server.py`
 
-### Development Setup
-```bash
-# Install dev dependencies
 pip install -r requirements-dev.txt
 
 # Run tests

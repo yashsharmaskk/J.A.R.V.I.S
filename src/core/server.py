@@ -160,7 +160,7 @@ def initialize_model():
         logger.error(f"❌ CPU load failed: {cpu_e}")
         return False
 
-def chat_with_llamacpp_stream(message, system_prompt="You are JARVIS, AI assistant. Be consice , informative and witty according to question. Respond in 2-3 sentences."):
+def chat_with_llamacpp_stream(message, system_prompt="You are JARVIS, AI assistant. Be concise, informative and witty according to question. Respond in 2-3 sentences."):
     """Stream chat responses from llama-cpp-python - OPTIMIZED FOR SPEED"""
     global MODEL_INSTANCE, speak_hindi
     
